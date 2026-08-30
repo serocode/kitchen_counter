@@ -330,7 +330,7 @@ export function PickleballDashboard() {
 
       {/* ========== VIEW CONTENT ========== */}
       {activeView === 'players' ? (
-        <main className="pt-14 md:pt-16 pb-[68px] md:pb-28 h-dvh animate-fade-in">
+        <main className="pt-14 lg:pt-16 pb-[68px] lg:pb-28 h-dvh animate-fade-in">
           <PlayersView
             gameState={gameState}
             matchWon={matchWon}
