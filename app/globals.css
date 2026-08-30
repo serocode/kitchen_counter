@@ -21,6 +21,11 @@
   --kc-accent-glow: rgba(209, 255, 0, 0.15);
   --kc-accent-glow-strong: rgba(209, 255, 0, 0.3);
 
+  /* Team identity on the court map only. Deliberately NOT the accent: lime
+     means "serving / live" everywhere, so a team must never own it. */
+  --kc-team-a: #6fb6ff;
+  --kc-team-b: #ff8a75;
+
   /* Secondary */
   --kc-secondary: #314671;
   --kc-secondary-text: #bdd0ff;
@@ -136,6 +141,8 @@
   --color-kc-secondary: var(--kc-secondary);
   --color-kc-secondary-text: var(--kc-secondary-text);
   --color-kc-error: var(--kc-error);
+  --color-kc-team-a: var(--kc-team-a);
+  --color-kc-team-b: var(--kc-team-b);
 }
 
 /* ============================================
@@ -340,5 +347,32 @@
   ::selection {
     background-color: var(--kc-accent-container);
     color: var(--kc-on-accent);
+  }
+}
+/* ============================================
+   Reduced Motion
+   ============================================ */
+
+/*
+ * The pulsing serve badge and score pop are decorative. Honour a stated
+ * preference for less motion rather than animating regardless.
+ */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible focus for keyboard users on the custom (non-shadcn) controls */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--kc-accent);
+    outline-offset: 2px;
   }
 }

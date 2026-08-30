@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { GameEvent, GameState } from '@/lib/pickleball-state';
 
+/** Rows rendered before the "show all" affordance kicks in. */
+const VISIBLE_EVENT_LIMIT = 50;
+
 interface HistoryViewProps {
   events: GameEvent[];
   gameState: GameState;
@@ -21,6 +24,8 @@ function getEventIcon(type: GameEvent['type']): string {
       return 'warning';
     case 'sideout':
       return 'swap_horiz';
+    case 'game':
+      return 'emoji_events';
     default:
       return 'circle';
   }
@@ -31,9 +36,11 @@ function getEventLabel(type: GameEvent['type']): string {
     case 'point':
       return 'Point Scored';
     case 'fault':
-      return 'Fault';
+      return 'Fault — second server';
     case 'sideout':
       return 'Side Out';
+    case 'game':
+      return 'Game Won';
     default:
       return 'Event';
   }
@@ -48,7 +55,12 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
     ? events
     : events.filter(e => (e.game ?? 1) === filterGame);
 
+  // Newest first, and capped: a five-game match can run to hundreds of events
+  // and rendering all of them makes the tab janky on a phone.
+  const [showAll, setShowAll] = useState(false);
   const reversedEvents = [...filteredEvents].reverse();
+  const visibleEvents = showAll ? reversedEvents : reversedEvents.slice(0, VISIBLE_EVENT_LIMIT);
+  const hiddenCount = reversedEvents.length - visibleEvents.length;
 
   // Event counts per game for the filter badges
   const eventsPerGame = gameNumbers.reduce<Record<number, number>>((acc, g) => {
@@ -121,10 +133,11 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
 
       {/* Event Timeline */}
       <div className="space-y-3">
-        {reversedEvents.map((event, index) => {
+        {visibleEvents.map((event, index) => {
           const teamName = event.team === 'A' ? gameState.teams.A.name : gameState.teams.B.name;
           const isPoint = event.type === 'point';
           const isSideout = event.type === 'sideout';
+          const isGameEnd = event.type === 'game';
           const gameNum = event.game ?? 1;
 
           return (
@@ -132,14 +145,20 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
               key={event.id || index}
               className="rounded-2xl p-4 flex items-center justify-between animate-slide-in-right"
               style={{
-                background: isPoint ? 'var(--kc-surface-mid)' : 'rgba(0, 0, 0, 0.3)',
-                borderLeft: `4px solid ${isPoint
-                    ? 'var(--kc-accent-container)'
-                    : isSideout
-                      ? 'var(--kc-secondary-text)'
-                      : 'var(--kc-surface-highest)'
+                background: isGameEnd
+                  ? 'var(--kc-surface-high)'
+                  : isPoint
+                    ? 'var(--kc-surface-mid)'
+                    : 'rgba(0, 0, 0, 0.3)',
+                borderLeft: `4px solid ${isGameEnd
+                    ? 'var(--kc-accent)'
+                    : isPoint
+                      ? 'var(--kc-accent-container)'
+                      : isSideout
+                        ? 'var(--kc-secondary-text)'
+                        : 'var(--kc-surface-highest)'
                   }`,
-                animationDelay: `${index * 0.03}s`,
+                animationDelay: `${Math.min(index, 12) * 0.03}s`,
               }}
             >
               <div className="flex items-center gap-4">
@@ -149,10 +168,11 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
                   style={{ background: 'var(--kc-surface-high)' }}
                 >
                   <span
-                    className={`material-symbols-outlined ${isPoint ? 'filled' : ''}`}
+                    aria-hidden="true"
+                    className={`material-symbols-outlined ${isPoint || isGameEnd ? 'filled' : ''}`}
                     style={{
-                      color: isPoint ? 'var(--kc-accent)' : 'var(--kc-text-dim)',
-                      fontVariationSettings: isPoint ? "'FILL' 1" : "'FILL' 0",
+                      color: isPoint || isGameEnd ? 'var(--kc-accent)' : 'var(--kc-text-dim)',
+                      fontVariationSettings: isPoint || isGameEnd ? "'FILL' 1" : "'FILL' 0",
                     }}
                   >
                     {getEventIcon(event.type)}
@@ -169,7 +189,9 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
                       ? `Server ${event.server ?? event.serverAfter.serverNumber} scored`
                       : event.type === 'sideout'
                         ? 'Serve transferred to other team'
-                        : `Server ${event.serverAfter.serverNumber} next`}
+                        : event.type === 'game'
+                          ? `Closed out game ${gameNum}`
+                          : `Server ${event.serverAfter.serverNumber} next`}
                   </p>
                 </div>
               </div>
@@ -199,6 +221,16 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
           );
         })}
       </div>
+
+      {hiddenCount > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full py-3 rounded-2xl font-lexend text-[10px] font-bold uppercase tracking-widest transition-all active:scale-[0.99] cursor-pointer"
+          style={{ background: 'var(--kc-surface-highest)', color: 'var(--kc-text-dim)' }}
+        >
+          Show {hiddenCount} earlier {hiddenCount === 1 ? 'event' : 'events'}
+        </button>
+      )}
     </div>
   );
 }
