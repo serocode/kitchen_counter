@@ -297,6 +297,10 @@ npm run build
 npm run start
 ```
 
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 serocode.
+
 ---
 
 Built for the Pickleball community.
