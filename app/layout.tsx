@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { siteDescription, siteDescriptionShort, siteName, siteTagline, siteUrl } from '@/lib/site'
 import { Inter, Lexend } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -23,8 +24,52 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Kitchen Counter | Pickleball Scoreboard',
-  description: 'Premium doubles pickleball scoring system with real-time tracking and analytics',
+  // Resolves every relative URL below (and the OG image) to an absolute one.
+  metadataBase: new URL(siteUrl),
+  // Keyword first, brand second: nobody searches for the brand yet.
+  title: {
+    default: `${siteTagline} — Free Online Scorekeeper | ${siteName}`,
+    template: `%s | ${siteName}`,
+  },
+  description: siteDescription,
+  applicationName: siteName,
+  keywords: [
+    'pickleball scoreboard',
+    'pickleball doubles scoring',
+    'pickleball score keeper',
+    'doubles serving rotation',
+    'pickleball stats tracker',
+    'online pickleball scoreboard',
+  ],
+  authors: [{ name: 'serocode', url: 'https://github.com/serocode' }],
+  creator: 'serocode',
+  category: 'sports',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName,
+    title: `${siteName} — ${siteTagline}`,
+    description: siteDescriptionShort,
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${siteName} — ${siteTagline}`,
+    description: siteDescriptionShort,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: '/kitchen_counter.png',
     apple: '/kitchen_counter.png',
