@@ -164,8 +164,6 @@ export function CourtDiagram({
   }
 
   const receivingTeam = otherTeam(servingTeam);
-  const teamA = gameState.teams.A;
-  const teamB = gameState.teams.B;
 
   const serverName = gameState.teams[servingTeam].players[servingPlayerIndex].name;
   const receiverName = gameState.teams[receivingTeam].players[receivingPlayerIndex].name;

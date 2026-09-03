@@ -19,4 +19,4 @@ export const siteDescription =
 
 /** Short form for OpenGraph/Twitter cards, which truncate around 200 characters. */
 export const siteDescriptionShort =
-  'Free doubles pickleball scoreboard with automatic server rotation, live stats, and match history. Works offline on any phone.';
+  'Free doubles pickleball scoreboard with automatic server rotation, live stats, and saved match history. No account needed.';

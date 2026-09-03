@@ -71,8 +71,13 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/kitchen_counter.png',
-    apple: '/kitchen_counter.png',
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    // iOS ignores the manifest and downscales whatever it is given, so hand it
+    // an already-correct 180px square rather than the 1024px source.
+    apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
   },
 }
 

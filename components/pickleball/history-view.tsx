@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { GameEvent, GameState } from '@/lib/pickleball-state';
+import { ArchivedMatch } from '@/lib/match-archive';
+import { PastMatches } from './past-matches';
 
 /** Rows rendered before the "show all" affordance kicks in. */
 const VISIBLE_EVENT_LIMIT = 50;
@@ -9,7 +11,14 @@ const VISIBLE_EVENT_LIMIT = 50;
 interface HistoryViewProps {
   events: GameEvent[];
   gameState: GameState;
+  /** Finished matches, newest first. */
+  archive: ArchivedMatch[];
+  onDeleteMatch: (id: string) => void;
+  onClearArchive: () => void;
 }
+
+/** The live match's event log, or the archive of finished ones. */
+type HistoryTab = 'current' | 'past';
 
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
@@ -46,7 +55,15 @@ function getEventLabel(type: GameEvent['type']): string {
   }
 }
 
-export function HistoryView({ events, gameState }: HistoryViewProps) {
+export function HistoryView({
+  events,
+  gameState,
+  archive,
+  onDeleteMatch,
+  onClearArchive,
+}: HistoryViewProps) {
+  const [tab, setTab] = useState<HistoryTab>('current');
+
   // Derive unique game numbers from events
   const gameNumbers = [...new Set(events.map(e => e.game ?? 1))].sort((a, b) => a - b);
   const [filterGame, setFilterGame] = useState<number | 'all'>('all');
@@ -68,8 +85,40 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
     return acc;
   }, {});
 
+  const TABS: { id: HistoryTab; label: string; count: number }[] = [
+    { id: 'current', label: 'This match', count: events.length },
+    { id: 'past', label: 'Past matches', count: archive.length },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Current-match log vs. the archive of finished matches */}
+      <div className="flex gap-2" role="tablist" aria-label="History scope">
+        {TABS.map(item => (
+          <button
+            key={item.id}
+            role="tab"
+            aria-selected={tab === item.id}
+            onClick={() => setTab(item.id)}
+            className="px-4 py-2 rounded-full text-[10px] font-lexend font-bold uppercase tracking-widest transition-all active:scale-95 cursor-pointer"
+            style={{
+              background: tab === item.id ? 'var(--kc-accent)' : 'var(--kc-surface-highest)',
+              color: tab === item.id ? 'var(--kc-on-accent)' : 'var(--kc-text-dim)',
+            }}
+          >
+            {item.label} ({item.count})
+          </button>
+        ))}
+      </div>
+
+      {tab === 'past' ? (
+        <PastMatches
+          matches={archive}
+          onDelete={onDeleteMatch}
+          onClearAll={onClearArchive}
+        />
+      ) : (
+        <div className="space-y-4">
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <h3 className="font-lexend font-bold text-sm tracking-widest uppercase">
@@ -230,6 +279,8 @@ export function HistoryView({ events, gameState }: HistoryViewProps) {
         >
           Show {hiddenCount} earlier {hiddenCount === 1 ? 'event' : 'events'}
         </button>
+      )}
+        </div>
       )}
     </div>
   );

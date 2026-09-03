@@ -32,9 +32,9 @@ const structuredData = {
     'Automatic doubles serving rotation and side-out tracking',
     'Server number (the third number) called for you',
     'Live player and team statistics',
-    'Match history across sessions',
+    'Finished matches saved on your device',
     'Screen wake lock for courtside use',
-    'Works offline in the browser',
+    'No account, no sign-up, no ads',
   ],
   author: {
     '@type': 'Person',

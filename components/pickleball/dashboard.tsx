@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePickleballGame } from '@/hooks/usePickleballGame';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import { useMatchArchive } from '@/hooks/useMatchArchive';
 import { MATCH_MODES, safeMatchMode } from '@/lib/pickleball-state';
 import { ScoreDisplay } from './score-display';
 import { CourtDiagram } from './court-diagram';
@@ -73,6 +74,13 @@ export function PickleballDashboard() {
     serveConversion,
     events,
   } = usePickleballGame();
+
+  // A won match is archived under its own storage key, so it survives the
+  // reset that clears the live scoreboard.
+  const { archive, deleteMatch, clearArchive } = useMatchArchive(
+    gameState,
+    matchWon.winner,
+  );
 
   const [activeView, setActiveView] = useState<ViewTab>('scoring');
   const [setupModalOpen, setSetupModalOpen] = useState(false);
@@ -263,7 +271,7 @@ export function PickleballDashboard() {
       >
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <img
-            src="/kitchen_counter.png"
+            src="/icon-192.png"
             alt=""
             className="w-8 h-8 rounded-lg outline outline-1 outline-[var(--kc-outline-dim)] shrink-0"
           />
@@ -462,7 +470,15 @@ export function PickleballDashboard() {
               />
             )}
 
-            {activeView === 'history' && <HistoryView events={events} gameState={gameState} />}
+            {activeView === 'history' && (
+              <HistoryView
+                events={events}
+                gameState={gameState}
+                archive={archive}
+                onDeleteMatch={deleteMatch}
+                onClearArchive={clearArchive}
+              />
+            )}
           </div>
         </main>
       )}

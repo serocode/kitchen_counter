@@ -51,6 +51,7 @@ A modern scoreboard app built for **Pickleball Doubles**. It tracks score, serve
 
 ### UX & Reliability
 - **Local persistence** — match state saved to `localStorage`; refresh without losing progress
+- **Saved match history** — finished matches are archived on your device and survive a reset
 - **Multi-step undo** — step back through the last 25 actions
 - **Screen wake lock** — keeps your screen on courtside
 - **Keyboard shortcuts** — score without touching the screen
@@ -222,6 +223,14 @@ Tap the **History** tab to review the full match timeline:
 - Useful for settling disputes about earlier plays
 - In multi-game matches, events are organized by game
 
+Switch to **Past matches** for the archive of finished matches:
+
+- A match is saved the moment it is won, and removed again if you undo that point
+- Each card shows the winner, the result, per-game scores, duration, and total points
+- The archive survives a reset, so starting a new match no longer loses the old one
+- Stored on your device only — up to the 50 most recent matches, deletable one at a
+  time or all at once
+
 ---
 
 ## Keyboard Shortcuts
@@ -295,6 +304,13 @@ open http://localhost:3000
 ```bash
 npm run build
 npm run start
+```
+
+### Quality Checks
+
+```bash
+npm run lint       # ESLint 9 + eslint-config-next (flat config)
+npm run typecheck  # tsc --noEmit
 ```
 
 ## License
