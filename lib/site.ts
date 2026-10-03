@@ -12,11 +12,11 @@ export const siteUrl = (
 
 export const siteName = 'Kitchen Counter';
 
-export const siteTagline = 'Pickleball Doubles Scoreboard';
+export const siteTagline = 'Pickleball Open Play & Doubles Scoreboard';
 
 export const siteDescription =
-  'A free pickleball doubles scoreboard that tracks server position, side-out rotation, and the third number for you. Live scoring, player stats, match history, and a screen that stays awake on the court.';
+  'A free pickleball open play manager and doubles scoreboard. Check players in with a skill level and Kitchen Counter matches them across your courts, keeps the queue fair, and tracks standings — plus a scoreboard that calls server position, side-outs and the third number for you.';
 
 /** Short form for OpenGraph/Twitter cards, which truncate around 200 characters. */
 export const siteDescriptionShort =
-  'Free doubles pickleball scoreboard with automatic server rotation, live stats, and saved match history. No account needed.';
+  'Free open play manager with skill-matched court rotation and live standings, plus a doubles scoreboard that calls the serve. No account needed.';

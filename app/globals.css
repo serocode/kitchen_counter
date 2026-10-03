@@ -376,3 +376,12 @@
     outline-offset: 2px;
   }
 }
+
+/* Horizontal chip rows scroll by touch or trackpad; the bar itself is noise. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

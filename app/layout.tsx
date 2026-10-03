@@ -28,12 +28,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   // Keyword first, brand second: nobody searches for the brand yet.
   title: {
-    default: `${siteTagline} — Free Online Scorekeeper | ${siteName}`,
+    default: `Free ${siteTagline} | ${siteName}`,
     template: `%s | ${siteName}`,
   },
   description: siteDescription,
   applicationName: siteName,
   keywords: [
+    'pickleball open play',
+    'pickleball court rotation',
+    'pickleball queue app',
+    'open play manager',
     'pickleball scoreboard',
     'pickleball doubles scoring',
     'pickleball score keeper',

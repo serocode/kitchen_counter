@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePickleballGame } from '@/hooks/usePickleballGame';
-import { useWakeLock } from '@/hooks/useWakeLock';
+import { useCallback, useEffect, useState } from 'react';
+import type { PickleballGame } from '@/hooks/usePickleballGame';
 import { useMatchArchive } from '@/hooks/useMatchArchive';
 import { MATCH_MODES, safeMatchMode } from '@/lib/pickleball-state';
+import { AppHeader, type AppSection, type MenuItem } from '@/components/app-header';
+import { BottomNav, type NavItem } from '@/components/bottom-nav';
+import { Chip } from '@/components/ui/chip';
 import { ScoreDisplay } from './score-display';
 import { CourtDiagram } from './court-diagram';
 import { ControlPanel } from './control-panel';
@@ -16,36 +18,31 @@ import { ConfirmResetDialog } from './confirm-reset-dialog';
 
 type ViewTab = 'scoring' | 'stats' | 'players' | 'history';
 
-const NAV_ITEMS: { id: ViewTab; icon: string; label: string }[] = [
+const NAV_ITEMS: NavItem<ViewTab>[] = [
   { id: 'scoring', icon: 'scoreboard', label: 'Scoring' },
   { id: 'stats', icon: 'leaderboard', label: 'Stats' },
   { id: 'players', icon: 'group', label: 'Players' },
   { id: 'history', icon: 'history_edu', label: 'History' },
 ];
 
-/** A pill in the status strip above the scoreboard. */
-function Chip({
-  children,
-  background,
-  color,
-  className = '',
-}: {
-  children: React.ReactNode;
-  background: string;
-  color: string;
-  className?: string;
-}) {
-  return (
-    <span
-      className={`px-3 py-1 rounded-full text-[10px] font-lexend font-bold uppercase tracking-widest ${className}`}
-      style={{ background, color }}
-    >
-      {children}
-    </span>
-  );
+interface PickleballDashboardProps {
+  game: PickleballGame;
+  onSectionChange: (section: AppSection) => void;
+  keepAwake: boolean;
+  onToggleKeepAwake: () => void;
+  wakeLockActive: boolean;
+  /** Shown above the scoreboard, e.g. when it is scoring an open play court. */
+  banner?: React.ReactNode;
 }
 
-export function PickleballDashboard() {
+export function PickleballDashboard({
+  game,
+  onSectionChange,
+  keepAwake,
+  onToggleKeepAwake,
+  wakeLockActive,
+  banner,
+}: PickleballDashboardProps) {
   const {
     gameState,
     isLoading,
@@ -73,7 +70,7 @@ export function PickleballDashboard() {
     longestRuns,
     serveConversion,
     events,
-  } = usePickleballGame();
+  } = game;
 
   // A won match is archived under its own storage key, so it survives the
   // reset that clears the live scoreboard.
@@ -85,13 +82,6 @@ export function PickleballDashboard() {
   const [activeView, setActiveView] = useState<ViewTab>('scoring');
   const [setupModalOpen, setSetupModalOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [keepAwake, setKeepAwake] = useState(true);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Only hold the screen awake during a live match, not on a finished one.
-  const matchIsLive = Boolean(gameState) && !matchWon.isWon;
-  const wakeLock = useWakeLock(keepAwake && matchIsLive);
 
   const isDialogOpen = setupModalOpen || confirmResetOpen;
 
@@ -173,27 +163,6 @@ export function PickleballDashboard() {
     startNextGame,
   ]);
 
-  // ── Dismiss the overflow menu on outside click / Escape ──────────────────
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const onPointerDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [menuOpen]);
-
   if (isLoading) {
     return (
       <div className="flex h-dvh items-center justify-center" style={{ background: 'var(--kc-bg)' }}>
@@ -236,7 +205,7 @@ export function PickleballDashboard() {
     matchWon.winner ? gameState.teams[matchWon.winner].name : '';
   const gameWinnerName = gameWon.winner ? gameState.teams[gameWon.winner].name : '';
 
-  const menuItems: { icon: string; label: string; onClick: () => void; danger?: boolean }[] = [
+  const menuItems: MenuItem[] = [
     {
       icon: 'settings',
       label: 'Match setup',
@@ -245,7 +214,7 @@ export function PickleballDashboard() {
     {
       icon: keepAwake ? 'visibility' : 'visibility_off',
       label: keepAwake ? 'Keep screen awake: on' : 'Keep screen awake: off',
-      onClick: () => setKeepAwake(v => !v),
+      onClick: onToggleKeepAwake,
     },
     {
       icon: 'restart_alt',
@@ -264,77 +233,13 @@ export function PickleballDashboard() {
         {gameState.serving.serverNumber}.
       </div>
 
-      {/* ========== TOP APP BAR ========== */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center w-full px-4 md:px-6 py-4"
-        style={{ background: 'var(--kc-bg)' }}
-      >
-        <div className="flex items-center gap-3 md:gap-4 min-w-0">
-          <img
-            src="/icon-192.png"
-            alt=""
-            className="w-8 h-8 rounded-lg outline outline-1 outline-[var(--kc-outline-dim)] shrink-0"
-          />
-          <h1
-            className="text-2xl font-black italic tracking-widest font-lexend uppercase hidden sm:block truncate"
-            style={{ color: 'var(--kc-accent)' }}
-          >
-            Kitchen Counter
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {wakeLock.isActive && (
-            <span
-              className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-lexend font-bold uppercase tracking-widest"
-              style={{ background: 'var(--kc-surface-highest)', color: 'var(--kc-text-dim)' }}
-              title="The screen will stay on while the match is live"
-            >
-              <span className="material-symbols-outlined text-[14px]" aria-hidden="true">visibility</span>
-              Screen on
-            </span>
-          )}
-
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setMenuOpen(v => !v)}
-              aria-label="Match options"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              className="transition-colors cursor-pointer p-2 rounded-full hover:text-[var(--kc-accent)]"
-              style={{ color: menuOpen ? 'var(--kc-accent)' : 'var(--kc-text-dim)' }}
-            >
-              <span className="material-symbols-outlined" aria-hidden="true">settings</span>
-            </button>
-
-            {menuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 mt-2 w-60 rounded-2xl overflow-hidden shadow-2xl animate-fade-in z-50"
-                style={{ background: 'var(--kc-surface-high)', border: '1px solid var(--kc-outline-dim)' }}
-              >
-                {menuItems.map(item => (
-                  <button
-                    key={item.label}
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      item.onClick();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer hover:bg-[var(--kc-surface-highest)]"
-                    style={{ color: item.danger ? 'var(--kc-error)' : 'var(--kc-text)' }}
-                  >
-                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                      {item.icon}
-                    </span>
-                    <span className="font-inter text-sm">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        section="scoreboard"
+        onSectionChange={onSectionChange}
+        menuItems={menuItems}
+        menuLabel="Match options"
+        wakeLockActive={wakeLockActive}
+      />
 
       {/* ========== VIEW CONTENT ========== */}
       {activeView === 'players' ? (
@@ -350,6 +255,8 @@ export function PickleballDashboard() {
         </main>
       ) : (
         <main className="pt-20 px-4 max-w-5xl mx-auto pb-28 md:pb-36 w-full">
+          {banner}
+
           {storageError && (
             <div
               role="alert"
@@ -483,48 +390,7 @@ export function PickleballDashboard() {
         </main>
       )}
 
-      {/* ========== BOTTOM NAVIGATION ========== */}
-      <nav
-        aria-label="Views"
-        className="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 z-50
-                   pt-1.5 md:pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-[max(1.5rem,env(safe-area-inset-bottom))]
-                   rounded-t-3xl md:rounded-t-[32px]"
-        style={{
-          background: 'rgba(9, 14, 21, 0.9)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderTop: '1px solid rgba(209, 255, 0, 0.1)',
-          boxShadow: '0 -8px 24px rgba(209, 255, 0, 0.05)',
-        }}
-      >
-        {NAV_ITEMS.map(item => {
-          const isActive = activeView === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              aria-current={isActive ? 'page' : undefined}
-              className="flex flex-col items-center justify-center px-3 sm:px-6 py-1.5 md:py-2 transition-all duration-200 active:scale-90 cursor-pointer"
-              style={{
-                background: isActive ? 'var(--kc-accent)' : 'transparent',
-                color: isActive ? 'var(--kc-bg)' : 'var(--kc-text-dim)',
-                borderRadius: isActive ? '9999px' : '0',
-              }}
-            >
-              <span
-                className="material-symbols-outlined text-[18px] md:text-[20px] leading-none mb-0.5"
-                style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                aria-hidden="true"
-              >
-                {item.icon}
-              </span>
-              <span className="font-lexend text-[9px] md:text-[10px] leading-none uppercase tracking-widest font-semibold">
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+      <BottomNav items={NAV_ITEMS} active={activeView} onChange={setActiveView} />
 
       {/* ========== MODALS ========== */}
       <PlayerSetupModal

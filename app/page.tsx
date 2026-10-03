@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PickleballDashboard } from '@/components/pickleball/dashboard';
+import { KitchenCounterApp } from '@/components/kitchen-counter-app';
 import { siteDescription, siteName, siteTagline, siteUrl } from '@/lib/site';
 
 // Title and description are inherited from the root layout; the home route only
@@ -29,6 +29,10 @@ const structuredData = {
     priceCurrency: 'USD',
   },
   featureList: [
+    'Open play court rotation for any number of players and courts',
+    'Matches drawn by skill level, with balanced and random modes',
+    'Fair queue that avoids repeat partners and back-to-back sit-outs',
+    'Live standings with wins, win rate and point differential',
     'Automatic doubles serving rotation and side-out tracking',
     'Server number (the third number) called for you',
     'Live player and team statistics',
@@ -50,7 +54,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <PickleballDashboard />
+      <KitchenCounterApp />
     </>
   );
 }

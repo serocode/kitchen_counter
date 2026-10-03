@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Player, MatchMode, MATCH_MODES } from '@/lib/pickleball-state';
+import { PhotoOptions, readPhoto } from '@/lib/photo';
 
 interface PlayerSetupProps {
   open: boolean;
@@ -38,7 +39,8 @@ type FormData = {
 };
 
 const MAX_NAME_LENGTH = 24;
-const MAX_IMAGE_DIMENSION = 500;
+/** Uncropped, since the spectator view shows the whole frame as a cutout. */
+const SCOREBOARD_PHOTO: PhotoOptions = { maxDimension: 500, quality: 0.6 };
 
 function buildFormData(props: PlayerSetupProps): FormData {
   return {
@@ -80,42 +82,16 @@ export function PlayerSetupModal(props: PlayerSetupProps) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: keyof FormData) => {
     const input = e.target;
     const file = input.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setUploadError('That file is not an image.');
-      input.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onerror = () => setUploadError('Could not read that file.');
-    reader.onloadend = () => {
-      const img = new Image();
-      img.onerror = () => setUploadError('Could not decode that image.');
-      img.onload = () => {
-        let { width, height } = img;
-        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(width, height));
-        width = Math.round(width * scale);
-        height = Math.round(height * scale);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setUploadError('Could not process that image.');
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        setUploadError(null);
-        setField(field, canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
     // Allow re-picking the same file after a removal.
     input.value = '';
+    if (!file) return;
+
+    readPhoto(file, SCOREBOARD_PHOTO)
+      .then(photo => {
+        setUploadError(null);
+        setField(field, photo);
+      })
+      .catch((error: Error) => setUploadError(error.message));
   };
 
   const handleSave = () => {

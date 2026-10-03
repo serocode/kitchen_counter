@@ -115,14 +115,15 @@ type Action =
   | { type: 'restart' }
   | { type: 'nextGame' }
   | { type: 'undo' }
-  | {
-      type: 'settings';
-      teamAName: string;
-      teamBName: string;
-      teamAPlayers: [Player, Player];
-      teamBPlayers: [Player, Player];
-      matchMode: MatchMode;
-    };
+  | ({ type: 'settings' } & MatchSettings);
+
+interface MatchSettings {
+  teamAName: string;
+  teamBName: string;
+  teamAPlayers: [Player, Player];
+  teamBPlayers: [Player, Player];
+  matchMode: MatchMode;
+}
 
 /** Pure — no storage writes, no timers. Safe under StrictMode double-invoke. */
 function reducer(state: GameState | null, action: Action): GameState | null {
@@ -240,6 +241,15 @@ export function usePickleballGame() {
     []
   );
 
+  /**
+   * Put a whole match on the scoreboard — a court's own game when switching
+   * courts, or a fresh one. The undo stack travels with it.
+   */
+  const replaceState = useCallback((state: GameState) => {
+    setLastAction(null);
+    dispatch({ type: 'hydrate', state: migrateState(state) });
+  }, []);
+
   // ─── Derived values ─────────────────────────────────────────────────────────
   const derived = useMemo(() => {
     if (!gameState) {
@@ -294,6 +304,7 @@ export function usePickleballGame() {
     startNextGame,
     undo,
     updateMatchSettings,
+    replaceState,
     ...derived,
     matchStats: gameState?.matchStats ?? {
       A: { pointsWon: 0, faults: 0, sideOuts: 0 },
@@ -302,3 +313,5 @@ export function usePickleballGame() {
     events: gameState?.events ?? [],
   };
 }
+
+export type PickleballGame = ReturnType<typeof usePickleballGame>;
