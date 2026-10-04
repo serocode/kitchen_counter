@@ -244,7 +244,9 @@ export function PickleballDashboard({
 
       {/* ========== VIEW CONTENT ========== */}
       {activeView === 'players' ? (
-        <main className="pt-20 pb-28 md:pb-36 w-full animate-fade-in">
+        // Below md the lineup is sized to fit between the header and the tab
+        // bar, so only the bar's own height is reserved at the bottom.
+        <main className="pt-20 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-36 w-full animate-fade-in">
           <PlayersView
             gameState={gameState}
             gameWon={gameWon}

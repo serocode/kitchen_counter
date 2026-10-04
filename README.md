@@ -255,7 +255,7 @@ Tap the **Players** tab for the match lineup — a card per team with both playe
 - **Swap court sides** — before the first rally of a game, put a team's partners in each other's courts to choose who serves or receives first
 - Tap **"Manage Players"** to edit names or photos
 
-The layout scales up on a large screen, so it still works as a **spectator display** projected courtside.
+On a phone the whole lineup fits on one screen — no scrolling — and the layout scales up on a large screen, so it still works as a **spectator display** projected courtside.
 
 ---
 

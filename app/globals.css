@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* A phone held upright. Little height is left between the header and the tab
+   bar, so the Players lineup drops what it can do without. */
+@custom-variant short (@media (width < 64rem) and (height < 48rem));
+
 
 :root {
   /* Surfaces (dark → light depth layers) */
