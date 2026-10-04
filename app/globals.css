@@ -30,6 +30,11 @@
   --kc-team-a: #6fb6ff;
   --kc-team-b: #ff8a75;
 
+  /* Podium. Metals, not the accent: lime already means "serving / live". */
+  --kc-gold: #f5c542;
+  --kc-silver: #c4cad6;
+  --kc-bronze: #d9915a;
+
   /* Secondary */
   --kc-secondary: #314671;
   --kc-secondary-text: #bdd0ff;

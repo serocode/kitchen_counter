@@ -31,6 +31,7 @@ import {
   undoLast,
   updatePlayer as updatePlayerFn,
 } from '@/lib/open-play';
+import { getPlayerInsights, getSessionHighlights } from '@/lib/open-play-stats';
 
 const STORAGE_KEY = 'kc-open-play';
 /**
@@ -191,7 +192,10 @@ export function useOpenPlay() {
 
   const derived = useMemo(() => {
     if (!session) return null;
+    const insights = getPlayerInsights(session.results);
     return {
+      insights,
+      highlights: getSessionHighlights(session.results, insights),
       waiting: getWaitingPlayers(session),
       statuses: getPlayerStatuses(session),
       blocked: getBlockedPlayer(session),

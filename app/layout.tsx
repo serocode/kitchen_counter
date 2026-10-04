@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { siteDescription, siteDescriptionShort, siteName, siteTagline, siteUrl } from '@/lib/site'
 import { Inter, Lexend } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { ServiceWorker } from '@/components/service-worker'
 import './globals.css'
 
 const inter = Inter({
@@ -102,6 +103,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased">
         {children}
+        <ServiceWorker />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

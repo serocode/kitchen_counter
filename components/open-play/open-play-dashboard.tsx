@@ -58,7 +58,7 @@ export function OpenPlayDashboard({
   const [scoringCourtId, setScoringCourtId] = useState<string | null>(null);
   const now = useNow(15_000);
 
-  const { waiting, blocked, statuses, records, standings, lastUndoLabel } = derived;
+  const { waiting, blocked, statuses, records, standings, insights, highlights, lastUndoLabel } = derived;
   const { undo } = openPlay;
   const isDialogOpen = setupOpen || endOpen || editingId !== null || scoringCourtId !== null;
 
@@ -107,7 +107,7 @@ export function OpenPlayDashboard({
       label: keepAwake ? 'Keep screen awake: on' : 'Keep screen awake: off',
       onClick: onToggleKeepAwake,
     },
-    { icon: 'restart_alt', label: 'End session', onClick: () => setEndOpen(true), danger: true },
+    { icon: 'flag', label: 'Wrap up session', onClick: () => setEndOpen(true), danger: true },
   ];
 
   const checkedIn = session.players.filter(p => p.active).length;
@@ -220,10 +220,13 @@ export function OpenPlayDashboard({
             <StandingsView
               standings={standings}
               results={session.results}
+              insights={insights}
+              highlights={highlights}
               photos={photos}
               playerName={id => resolve(id).name}
               unplayedCount={session.players.length - standings.length}
               onDeleteResult={openPlay.deleteResult}
+              onWrapUp={() => setEndOpen(true)}
             />
           )}
         </div>
@@ -266,6 +269,11 @@ export function OpenPlayDashboard({
       <EndSessionDialog
         open={endOpen}
         onOpenChange={setEndOpen}
+        session={session}
+        standings={standings}
+        highlights={highlights}
+        photos={photos}
+        playerName={id => resolve(id).name}
         onKeepRoster={() => openPlay.resetSession(true)}
         onClearAll={() => openPlay.resetSession(false)}
       />

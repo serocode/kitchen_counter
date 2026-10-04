@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 export type AppSection = 'open-play' | 'scoreboard';
 
@@ -27,6 +28,7 @@ interface AppHeaderProps {
 /** Fixed top bar: brand, the Open Play / Scoreboard switch, and an options menu. */
 export function AppHeader({ section, onSectionChange, menuItems, menuLabel, wakeLockActive }: AppHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const online = useOnlineStatus();
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Dismiss the overflow menu on outside click / Escape.
@@ -95,6 +97,17 @@ export function AppHeader({ section, onSectionChange, menuItems, menuLabel, wake
       </nav>
 
       <div className="flex items-center gap-2 shrink-0">
+        {!online && (
+          <span
+            role="status"
+            className="flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 md:py-1 rounded-full text-[9px] font-lexend font-bold uppercase tracking-widest"
+            style={{ background: 'var(--kc-surface-highest)', color: 'var(--kc-error)' }}
+            title="No connection — everything is saved on this device"
+          >
+            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">cloud_off</span>
+            <span className="sr-only md:not-sr-only">Offline</span>
+          </span>
+        )}
         {wakeLockActive && (
           <span
             className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-lexend font-bold uppercase tracking-widest"

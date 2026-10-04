@@ -46,6 +46,11 @@ The two stay in step: the scoreboard follows an open play court and moves on to 
 - **Lock-in partners** — lock two players together and they always play on the same team. They are drawn into a match together, rejoin the line side by side after a game, and hold the place of whichever of them has waited longer. Locked pairs can meet each other, and the queue and match cards mark them with a link icon. If one partner sits out or is on another court, the other plays with anyone, so a lock never strands a player.
 - **Sit out / check back in** — players can step out without leaving the roster.
 - **Standings** — ranked by wins, then win rate, then point differential, with a log of every game.
+  - **Podium** — first, second and third stand on a podium in gold, silver and bronze. Players level on every tiebreaker share a step, so a locked pair that wins together shares first place.
+  - **Session highlights** — games played and their pace, the longest win streak, the biggest win and the top duo.
+  - **Per-player metrics** — a flame marks anyone on a 3+ win streak, and the table shows their last five games. Tap a player for their streak, average score and margin, court time, average wait between games and best partner.
+- **Wrap up & share** — ending a session shows the final podium and a summary, then lets you **copy** a recap for the group chat, **share** it from your phone, or save a **CSV** of the standings and every game. Starting over is undoable, and it warns you if matches are still on court.
+- **Works offline** — once loaded, the app opens and runs with no signal, including the icons. Everything was already stored on your device; the app itself is now too.
 - **Undo** — step back through the last 25 court actions.
 
 ### Scoring Logic
@@ -166,7 +171,7 @@ The two stay in step: the scoreboard follows an open play court and moves on to 
 6. To score a court point by point, tap **Keep score** — or just open **Scoreboard** in the header, which shows a court in play automatically. A bar above the scoreboard switches between courts (each keeps its own score and undo history) and **Free play** (a scoreboard match of your own, set aside rather than lost). Live scores show on the court cards as well.
    - When a game is won, tap **Record on Court N** on the scoreboard, or **Record Team N win** on the court card.
    - The scoreboard follows the court, so its next match comes up on its own — leave a tablet on Court 1's scoreboard and it keeps up.
-7. **Standings** shows the leaderboard and every game played; a wrongly recorded game can be deleted there.
+7. **Standings** shows the podium, the session highlights, the full leaderboard (tap a player for more) and every game played; a wrongly recorded game can be deleted there. **Copy**, **Share** and **CSV** take the results with you.
 
 Other controls:
 
@@ -177,7 +182,7 @@ Other controls:
 - The **⏸** button sits a player out; tap their name under *Sitting out* to check them back in at the back of the line.
 - The **↩** icon on a court sends its players back to the front of the line without recording a result.
 - **Undo** (top right, or `Z`) reverses the last court action.
-- **gear → End session** starts over, either keeping the roster or clearing it.
+- **gear → Wrap up session** (or **Wrap up session** at the bottom of Standings) shows how the session went, lets you copy, share or save the results, then starts over — keeping the roster, their ratings and locked partners, or clearing everything. Either way, **Undo** brings it all back.
 
 ---
 
@@ -334,6 +339,8 @@ Kitchen Counter implements all official pickleball doubles scoring rules:
 - **Icons:** Google Material Symbols
 - **Analytics:** Vercel Analytics
 - **Persistence:** Browser `localStorage`
+- **Offline:** A hand-written service worker (`public/sw.js`, no dependencies), registered in production builds only. The page is network-first with a short patience, so a weak connection falls back to the saved copy instead of hanging; built files, icons and the Google font files are stale-while-revalidate. To test it, run `pnpm build && pnpm start`, load the app once, then stop the server and reload. In development the worker is disabled, and any left over from a production build on the same address is removed.
+- **Session stats:** `lib/open-play-stats.ts` — pure functions for per-player form and streaks, the session highlights, and the shareable text and CSV.
 
 ---
 

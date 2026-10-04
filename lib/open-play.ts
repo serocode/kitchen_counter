@@ -930,8 +930,13 @@ export function deleteResult(session: OpenPlaySession, resultId: string): OpenPl
 
 /**
  * Start over. Keeping the roster clears games, standings and the courts but
- * keeps everyone checked in, in their current order. Either way the court
- * count and matching settings survive — they describe the venue, not the day.
+ * keeps everyone checked in, in their current order, along with their locked
+ * partners. Either way the court count and matching settings survive — they
+ * describe the venue, not the day.
+ *
+ * Ending is undoable: the session as it stood is kept as the one undo step, so
+ * a slip of the thumb never costs a whole evening. Older steps are dropped
+ * rather than carried along — they belong to a session that is over.
  */
 export function resetSession(session: OpenPlaySession, keepRoster: boolean, ctx: ActionContext): OpenPlaySession {
   const fresh: OpenPlaySession = {
@@ -940,17 +945,22 @@ export function resetSession(session: OpenPlaySession, keepRoster: boolean, ctx:
     mode: session.mode,
     autoStart: session.autoStart,
   };
-  if (!keepRoster) return fresh;
 
-  const ordered = [...session.players].sort((a, b) => a.queueSeq - b.queueSeq);
-  return settle(
-    {
-      ...fresh,
-      players: ordered.map((p, index) => ({ ...p, queueSeq: index, matchesWaited: 0 })),
-      nextSeq: ordered.length,
-    },
-    createRng(ctx.seed),
-  );
+  let next = fresh;
+  if (keepRoster) {
+    const ordered = [...session.players].sort((a, b) => a.queueSeq - b.queueSeq);
+    next = settle(
+      {
+        ...fresh,
+        players: ordered.map((p, index) => ({ ...p, queueSeq: index, matchesWaited: 0 })),
+        nextSeq: ordered.length,
+      },
+      createRng(ctx.seed),
+    );
+  }
+
+  const label = keepRoster ? 'End session' : 'Clear everything';
+  return { ...next, history: [{ label, snapshot: { ...session, history: [] } }] };
 }
 
 export function undoLast(session: OpenPlaySession): OpenPlaySession {

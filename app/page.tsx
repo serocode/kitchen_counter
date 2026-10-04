@@ -37,6 +37,7 @@ const structuredData = {
     'Server number (the third number) called for you',
     'Live player and team statistics',
     'Finished matches saved on your device',
+    'Works offline once loaded',
     'Screen wake lock for courtside use',
     'No account, no sign-up, no ads',
   ],

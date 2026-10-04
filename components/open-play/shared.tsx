@@ -6,6 +6,16 @@ import { AVATAR_PHOTO, readPhoto } from '@/lib/photo';
 
 export const TEAM_COLORS = ['var(--kc-team-a)', 'var(--kc-team-b)'] as const;
 
+const MEDAL_COLORS = { 1: 'var(--kc-gold)', 2: 'var(--kc-silver)', 3: 'var(--kc-bronze)' } as const;
+
+/** The medal colour for a standings rank, or null below third. Tied players share one. */
+export function medalColor(rank: number): string | null {
+  return rank >= 1 && rank <= 3 ? MEDAL_COLORS[rank as 1 | 2 | 3] : null;
+}
+
+/** A translucent version of any colour token, for borders and washes. */
+export const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+
 /** A player as the views draw them: the name, and a rating if still on the roster. */
 export interface PlayerChip {
   id: string;
