@@ -13,6 +13,7 @@ import {
   deleteResult as deleteResultFn,
   fillOpenCourts as fillOpenCourtsFn,
   finishMatch as finishMatchFn,
+  getBlockedPlayer,
   getPlayerRecords,
   getPlayerStatuses,
   getStandings,
@@ -23,6 +24,7 @@ import {
   setAutoStart as setAutoStartFn,
   setCourtCount as setCourtCountFn,
   setMatchingMode as setMatchingModeFn,
+  setPartner as setPartnerFn,
   setPlayerActive as setPlayerActiveFn,
   shuffleUpNext as shuffleUpNextFn,
   startMatch as startMatchFn,
@@ -166,6 +168,8 @@ export function useOpenPlay() {
       setPhoto,
       updatePlayer: (id: string, changes: Partial<PlayerDetails>) =>
         apply((s, ctx) => updatePlayerFn(s, id, changes, ctx)),
+      setPartner: (id: string, partnerId: string | null) =>
+        apply((s, ctx) => setPartnerFn(s, id, partnerId, ctx)),
       setPlayerActive: (id: string, active: boolean) =>
         apply((s, ctx) => setPlayerActiveFn(s, id, active, ctx)),
       removePlayer: (id: string) => apply((s, ctx) => removePlayerFn(s, id, ctx)),
@@ -190,6 +194,7 @@ export function useOpenPlay() {
     return {
       waiting: getWaitingPlayers(session),
       statuses: getPlayerStatuses(session),
+      blocked: getBlockedPlayer(session),
       records: getPlayerRecords(session.results),
       standings: getStandings(session),
       lastUndoLabel: session.history[session.history.length - 1]?.label ?? null,

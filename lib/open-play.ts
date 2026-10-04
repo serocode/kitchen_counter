@@ -81,6 +81,12 @@ export interface OpenPlayer {
   queueSeq: number;
   /** Matches that started while this player waited. Reset when they play. */
   matchesWaited: number;
+  /**
+   * Locked in with this player: whenever both are waiting they play together,
+   * on the same team. Mirrored on both players. While one sits out or is on a
+   * court the other plays with anyone, so a lock never strands a player.
+   */
+  partnerId?: string;
 }
 
 export interface CourtMatch {
@@ -208,6 +214,38 @@ export function getWaitingPlayers(session: OpenPlaySession): OpenPlayer[] {
   return session.players
     .filter(p => p.active && !onCourt.has(p.id))
     .sort((a, b) => a.queueSeq - b.queueSeq);
+}
+
+/**
+ * Each waiting player's locked partner, when that partner is waiting too. A
+ * lock can only be honoured while both are in the queue — one on a court or
+ * sitting out leaves the other free to play with anyone.
+ */
+function waitingPairs(waiting: OpenPlayer[]): Map<string, string> {
+  const byId = new Map(waiting.map(p => [p.id, p]));
+  const pairs = new Map<string, string>();
+  for (const p of waiting) {
+    if (p.partnerId && byId.get(p.partnerId)?.partnerId === p.id) pairs.set(p.id, p.partnerId);
+  }
+  return pairs;
+}
+
+/**
+ * The player at the front of the line when the locks leave no match for them.
+ * The matcher always plays the front whenever any four with them exists, so a
+ * staged match without them means none does: everyone else waiting is locked
+ * into pairs that would have to be split to make room.
+ */
+export function getBlockedPlayer(session: OpenPlaySession): OpenPlayer | null {
+  const front = getWaitingPlayers(session)[0];
+  if (!front || !session.upNext || session.upNext.flat().includes(front.id)) return null;
+  return front;
+}
+
+/** The player this one is locked in with, whatever either is doing right now. */
+export function getPartner(session: OpenPlaySession, id: string): OpenPlayer | undefined {
+  const partnerId = session.players.find(p => p.id === id)?.partnerId;
+  return partnerId ? session.players.find(p => p.id === partnerId) : undefined;
 }
 
 export function getPlayerName(session: OpenPlaySession, id: string): string {
@@ -411,15 +449,33 @@ function lastCourtmates(results: MatchResult[]): Map<string, Set<string>> {
   return courtmates;
 }
 
-/** How many of the six pairs among four players shared their last game. */
-function countRecentPairs(ids: string[], courtmates: Map<string, Set<string>>): number {
+/**
+ * How many of the six pairs among four players shared their last game.
+ * `skip` leaves out pairs that are meant to be together, like locked partners.
+ */
+function countRecentPairs(
+  ids: string[],
+  courtmates: Map<string, Set<string>>,
+  skip?: (a: string, b: string) => boolean,
+): number {
   let pairs = 0;
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {
-      if (courtmates.get(ids[i])?.has(ids[j])) pairs++;
+      if (courtmates.get(ids[i])?.has(ids[j]) && !skip?.(ids[i], ids[j])) pairs++;
     }
   }
   return pairs;
+}
+
+/** Whether a matchup keeps every waiting locked pair together on one team. */
+function keepsPairsTogether(matchup: Matchup, partnerOf: Map<string, string>): boolean {
+  const side = new Map<string, number>();
+  matchup.forEach((team, index) => team.forEach(id => side.set(id, index)));
+  for (const [id, mine] of side) {
+    const partner = partnerOf.get(id);
+    if (partner !== undefined && side.get(partner) !== mine) return false;
+  }
+  return true;
 }
 
 /**
@@ -431,13 +487,32 @@ function countRecentPairs(ids: string[], courtmates: Map<string, Set<string>>): 
  * wait time, skill spread, team balance and repeat pairings. A seeded jitter
  * breaks near-ties, which is what makes the matching feel random rather than
  * the same four players every time.
+ *
+ * Locked partners who are both waiting travel as one: they are in the four
+ * together or not at all, and always on the same team. A pair brought in by
+ * its front-of-line member keeps that member's place, so the other is never
+ * made to wait behind a lock they asked for.
  */
 export function proposeMatch(session: OpenPlaySession, rng: Rng): Matchup | null {
   const waiting = getWaitingPlayers(session);
   if (waiting.length < PLAYERS_PER_MATCH) return null;
 
   const w = WEIGHTS[session.mode];
+  const partnerOf = waitingPairs(waiting);
+  const isLocked = (a: string, b: string) => partnerOf.get(a) === b;
+  const place = new Map(waiting.map((p, index) => [p.id, index]));
   const pool = waiting.slice(0, Math.max(PLAYERS_PER_MATCH, w.window));
+  // A window that ends between two partners would leave one of them unusable,
+  // so it reaches past its edge for the other.
+  const inPool = new Set(pool.map(p => p.id));
+  for (const p of [...pool]) {
+    const partner = partnerOf.get(p.id);
+    if (partner !== undefined && !inPool.has(partner)) {
+      inPool.add(partner);
+      pool.push(waiting[place.get(partner) ?? 0]);
+    }
+  }
+
   const { partners, opponents } = pairingHistory(session.results);
   const courtmates = lastCourtmates(session.results);
   const count = (map: Map<string, number>, a: string, b: string) => map.get(pairKey(a, b)) ?? 0;
@@ -447,59 +522,109 @@ export function proposeMatch(session: OpenPlaySession, rng: Rng): Matchup | null
   const fewestGames = Math.min(...games.values());
   const extraGames = (p: OpenPlayer) => Math.min(GAMES_CAP, (games.get(p.id) ?? 0) - fewestGames);
 
-  let best: { cost: number; teams: Matchup } | null = null;
+  const found: { best: { cost: number; teams: Matchup } | null } = { best: null };
 
-  for (let i = 1; i < pool.length; i++) {
-    for (let j = i + 1; j < pool.length; j++) {
-      for (let k = j + 1; k < pool.length; k++) {
-        const group = [pool[0], pool[i], pool[j], pool[k]];
-        const skills = group.map(p => p.skill);
-        const spread = Math.max(...skills) - Math.min(...skills);
-        const skippedDue = dueInPool - group.reduce((sum, p) => sum + dueCost(p), 0);
-        const recentPairs = countRecentPairs(group.map(p => p.id), courtmates);
-        const baseCost =
-          w.wait * (i + j + k) +
-          DUE_WEIGHT * skippedDue +
-          RECENT_WEIGHT * recentPairs +
-          GAMES_WEIGHT * group.reduce((sum, p) => sum + extraGames(p), 0) +
-          w.spread * spread;
+  const consider = (group: OpenPlayer[]) => {
+    // A locked pair is never split between the four and the queue.
+    const ids = new Set(group.map(p => p.id));
+    if (group.some(p => {
+      const partner = partnerOf.get(p.id);
+      return partner !== undefined && !ids.has(partner);
+    })) return;
 
-        for (const [a, b, c, d] of SPLITS) {
-          const t1 = [group[a], group[b]];
-          const t2 = [group[c], group[d]];
-          const balance = Math.abs(t1[0].skill + t1[1].skill - t2[0].skill - t2[1].skill);
-          const partnerRepeats = count(partners, t1[0].id, t1[1].id) + count(partners, t2[0].id, t2[1].id);
-          let opponentRepeats = 0;
-          for (const x of t1) for (const y of t2) opponentRepeats += count(opponents, x.id, y.id);
+    const skills = group.map(p => p.skill);
+    const spread = Math.max(...skills) - Math.min(...skills);
+    const skippedDue = dueInPool - group.reduce((sum, p) => sum + dueCost(p), 0);
+    // Locked partners are meant to share a court game after game; only a
+    // foursome that is otherwise the same should count as a rematch.
+    const recentPairs = countRecentPairs(group.map(p => p.id), courtmates, isLocked);
+    const baseCost =
+      w.wait * group.reduce((sum, p) => sum + (place.get(p.id) ?? 0), 0) +
+      DUE_WEIGHT * skippedDue +
+      RECENT_WEIGHT * recentPairs +
+      GAMES_WEIGHT * group.reduce((sum, p) => sum + extraGames(p), 0) +
+      w.spread * spread;
 
-          const cost =
-            baseCost +
-            w.balance * balance +
-            w.partner * partnerRepeats +
-            w.opponent * opponentRepeats +
-            w.jitter * rng();
+    for (const [a, b, c, d] of SPLITS) {
+      const t1 = [group[a], group[b]];
+      const t2 = [group[c], group[d]];
 
-          if (!best || cost < best.cost) {
-            best = { cost, teams: [[t1[0].id, t1[1].id], [t2[0].id, t2[1].id]] };
-          }
+      // Locked partners share a team: skip any split that parts them.
+      const firstTeam = new Set(t1.map(p => p.id));
+      const partsPair = group.some(p => {
+        const partner = partnerOf.get(p.id);
+        return partner !== undefined && firstTeam.has(p.id) !== firstTeam.has(partner);
+      });
+      if (partsPair) continue;
+
+      const balance = Math.abs(t1[0].skill + t1[1].skill - t2[0].skill - t2[1].skill);
+      const repeats = (x: OpenPlayer, y: OpenPlayer) => (isLocked(x.id, y.id) ? 0 : count(partners, x.id, y.id));
+      const partnerRepeats = repeats(t1[0], t1[1]) + repeats(t2[0], t2[1]);
+      let opponentRepeats = 0;
+      for (const x of t1) for (const y of t2) opponentRepeats += count(opponents, x.id, y.id);
+
+      const cost =
+        baseCost +
+        w.balance * balance +
+        w.partner * partnerRepeats +
+        w.opponent * opponentRepeats +
+        w.jitter * rng();
+
+      if (!found.best || cost < found.best.cost) {
+        found.best = { cost, teams: [[t1[0].id, t1[1].id], [t2[0].id, t2[1].id]] };
+      }
+    }
+  };
+
+  const withFront = (candidates: OpenPlayer[]) => {
+    for (let i = 1; i < candidates.length; i++) {
+      for (let j = i + 1; j < candidates.length; j++) {
+        for (let k = j + 1; k < candidates.length; k++) {
+          consider([candidates[0], candidates[i], candidates[j], candidates[k]]);
+        }
+      }
+    }
+  };
+
+  withFront(pool);
+  // A window made up of locked pairs has no spare single to fill the front
+  // player's team. The front of the line still plays: look further back.
+  if (!found.best && pool.length < waiting.length) withFront(waiting);
+
+  // Only when no four with the front exists at all — an unpaired player facing
+  // nothing but locked pairs — play the best four without them, rather than
+  // idle a court. They stay due, and are first in line the moment it allows.
+  if (!found.best) {
+    for (let a = 0; a < pool.length; a++) {
+      for (let b = a + 1; b < pool.length; b++) {
+        for (let c = b + 1; c < pool.length; c++) {
+          for (let d = c + 1; d < pool.length; d++) consider([pool[a], pool[b], pool[c], pool[d]]);
         }
       }
     }
   }
 
-  return best?.teams ?? null;
+  return found.best?.teams ?? null;
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 /**
  * Bring the staged match back in line after any change: drop it when its
- * players are no longer all waiting, and stage a new one when possible.
+ * players are no longer all waiting or it would part a locked pair, and stage
+ * a new one when possible.
  */
 function settle(session: OpenPlaySession, rng: Rng, reshuffle = false): OpenPlaySession {
-  const waitingIds = new Set(getWaitingPlayers(session).map(p => p.id));
+  const waiting = getWaitingPlayers(session);
+  const waitingIds = new Set(waiting.map(p => p.id));
+  const partnerOf = waitingPairs(waiting);
   let upNext = session.upNext;
-  if (reshuffle || (upNext && !upNext.flat().every(id => waitingIds.has(id)))) upNext = null;
+  if (
+    reshuffle ||
+    (upNext && !(upNext.flat().every(id => waitingIds.has(id)) && keepsPairsTogether(upNext, partnerOf)))
+  ) {
+    upNext = null;
+  }
   if (!upNext) upNext = proposeMatch(session, rng);
   return { ...session, upNext };
 }
@@ -602,8 +727,53 @@ export function setPlayerActive(
 export function removePlayer(session: OpenPlaySession, id: string, ctx: ActionContext): OpenPlaySession {
   const player = session.players.find(p => p.id === id);
   if (!player || getOnCourtIds(session).has(id)) return session;
-  const next = { ...session, players: session.players.filter(p => p.id !== id) };
+  const next = {
+    ...session,
+    // Their partner is left unlocked rather than pointing at nobody.
+    players: session.players
+      .filter(p => p.id !== id)
+      .map(p => (p.partnerId === id ? { ...p, partnerId: undefined } : p)),
+  };
   return withUndo(session, settle(next, createRng(ctx.seed)), `Remove ${player.name}`);
+}
+
+/**
+ * Lock two players in as partners, or release one with `null`. Locking
+ * replaces any lock either already had, so nobody ends up with two partners.
+ * The staged match is redrawn only if it would part the new pair.
+ */
+export function setPartner(
+  session: OpenPlaySession,
+  id: string,
+  partnerId: string | null,
+  ctx: ActionContext,
+): OpenPlaySession {
+  const player = session.players.find(p => p.id === id);
+  if (!player) return session;
+
+  if (partnerId === null) {
+    if (!player.partnerId) return session;
+    const former = player.partnerId;
+    return settle(
+      {
+        ...session,
+        players: session.players.map(p => (p.id === id || p.id === former ? { ...p, partnerId: undefined } : p)),
+      },
+      createRng(ctx.seed),
+    );
+  }
+
+  if (partnerId === id || !session.players.some(p => p.id === partnerId)) return session;
+  if (player.partnerId === partnerId) return session;
+
+  const players = session.players.map(p => {
+    if (p.id === id) return { ...p, partnerId };
+    if (p.id === partnerId) return { ...p, partnerId: id };
+    // Whoever either of them was locked with before is free again.
+    if (p.partnerId === id || p.partnerId === partnerId) return { ...p, partnerId: undefined };
+    return p;
+  });
+  return settle({ ...session, players }, createRng(ctx.seed));
 }
 
 /** Add or remove courts at the end. A court with a match on it is never removed. */
@@ -657,7 +827,8 @@ export function fillOpenCourts(session: OpenPlaySession, ctx: ActionContext): Op
 
 /**
  * Record a finished match. The four players go to the back of the line in a
- * random order, and with auto-start on, the staged match takes the court.
+ * random order — locked partners together, so a lock survives the requeue —
+ * and with auto-start on, the staged match takes the court.
  */
 export function finishMatch(
   session: OpenPlaySession,
@@ -673,7 +844,25 @@ export function finishMatch(
 
   const ids = match.teams.flat();
   let seq = session.nextSeq;
-  const requeue = new Map(shuffle(ids, rng).map(id => [id, seq++]));
+  // Shuffle whole units — a locked pair is one — so partners stay side by side.
+  const onCourt = new Set(ids);
+  const partnerOf = new Map(
+    session.players.flatMap(p => (p.partnerId && onCourt.has(p.id) && onCourt.has(p.partnerId) ? [[p.id, p.partnerId] as const] : [])),
+  );
+  const placed = new Set<string>();
+  const units: string[][] = [];
+  for (const id of ids) {
+    if (placed.has(id)) continue;
+    const partner = partnerOf.get(id);
+    placed.add(id);
+    if (partner !== undefined && !placed.has(partner)) {
+      placed.add(partner);
+      units.push([id, partner]);
+    } else {
+      units.push([id]);
+    }
+  }
+  const requeue = new Map(shuffle(units, rng).flat().map(id => [id, seq++]));
   const names = Object.fromEntries(ids.map(id => [id, getPlayerName(session, id)]));
 
   let next: OpenPlaySession = {
@@ -794,7 +983,18 @@ function parsePlayer(raw: unknown): OpenPlayer | null {
     active: p.active !== false,
     queueSeq: isNumber(p.queueSeq) ? p.queueSeq : 0,
     matchesWaited: isNumber(p.matchesWaited) ? p.matchesWaited : 0,
+    partnerId: isString(p.partnerId) ? p.partnerId : undefined,
   };
+}
+
+/** A lock only survives if it is mutual and points at someone still on the roster. */
+function dropBrokenLocks(players: OpenPlayer[]): OpenPlayer[] {
+  const byId = new Map(players.map(p => [p.id, p]));
+  return players.map(p =>
+    p.partnerId && p.partnerId !== p.id && byId.get(p.partnerId)?.partnerId === p.id
+      ? p
+      : { ...p, partnerId: undefined },
+  );
 }
 
 function parseResult(raw: unknown): MatchResult | null {
@@ -822,9 +1022,9 @@ function parseSnapshot(raw: unknown): OpenPlaySession {
   if (!raw || typeof raw !== 'object') return base;
   const r = raw as Partial<OpenPlaySession>;
 
-  const players = (Array.isArray(r.players) ? r.players : [])
-    .map(parsePlayer)
-    .filter((p): p is OpenPlayer => p !== null);
+  const players = dropBrokenLocks(
+    (Array.isArray(r.players) ? r.players : []).map(parsePlayer).filter((p): p is OpenPlayer => p !== null),
+  );
   const known = new Set(players.map(p => p.id));
   const allKnown = (m: Matchup) => m.flat().every(id => known.has(id));
 

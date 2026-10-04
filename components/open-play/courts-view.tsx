@@ -9,6 +9,8 @@ import { Avatar, EmptyState, IconButton, PlayerChip, SectionHeading, SkillBadge,
 interface CourtsViewProps {
   session: OpenPlaySession;
   waiting: OpenPlayer[];
+  /** First in line, but locked pairs leave no match for them; null when nothing blocks. */
+  blocked: OpenPlayer | null;
   records: Map<string, PlayerRecord>;
   resolve: (id: string) => PlayerChip;
   now: number;
@@ -29,6 +31,7 @@ interface CourtsViewProps {
 export function CourtsView({
   session,
   waiting,
+  blocked,
   records,
   resolve,
   now,
@@ -69,6 +72,7 @@ export function CourtsView({
     .filter(p => !p.active)
     .sort((a, b) => a.name.localeCompare(b.name));
   const shortBy = PLAYERS_PER_MATCH - waiting.length;
+  const waitingById = new Map(waiting.map(p => [p.id, p]));
 
   return (
     <div className="space-y-8">
@@ -110,6 +114,23 @@ export function CourtsView({
               <TeamBlock side={0} players={upNext[0].map(resolve)} highlight />
               <TeamBlock side={1} players={upNext[1].map(resolve)} highlight />
             </div>
+
+            {blocked && (
+              <p className="flex items-start gap-2 text-xs font-inter" style={{ color: 'var(--kc-text-dim)' }}>
+                <span
+                  className="material-symbols-outlined text-[16px] shrink-0"
+                  style={{ color: 'var(--kc-error)' }}
+                  aria-hidden="true"
+                >
+                  link
+                </span>
+                <span>
+                  <strong style={{ color: 'var(--kc-text)' }}>{blocked.name}</strong>{' '}
+                  is first in line but can&apos;t join this match — everyone else waiting is locked in as a pair. Unlock a pair, or check in another
+                  player without a partner, to get them on court.
+                </span>
+              </p>
+            )}
 
             {openCourts.length > 0 ? (
               <div className="flex flex-col sm:flex-row gap-2">
@@ -203,6 +224,8 @@ export function CourtsView({
             {waiting.map((player, index) => {
               const isUpNext = upNextIds.has(player.id);
               const { games } = getRecord(records, player.id);
+              const partner = player.partnerId ? waitingById.get(player.partnerId) : undefined;
+              const lockedWith = partner?.partnerId === player.id ? partner : undefined;
               return (
                 <li
                   key={player.id}
@@ -219,6 +242,17 @@ export function CourtsView({
                   <span className="flex-1 min-w-0 truncate text-sm font-semibold" style={{ color: 'var(--kc-text)' }}>
                     {player.name}
                   </span>
+                  {lockedWith && (
+                    <span
+                      className="material-symbols-outlined text-[16px] shrink-0"
+                      style={{ color: 'var(--kc-secondary-text)' }}
+                      title={`Plays with ${lockedWith.name}`}
+                      role="img"
+                      aria-label={`Locked with ${lockedWith.name}`}
+                    >
+                      link
+                    </span>
+                  )}
                   {isUpNext && (
                     <span
                       className="hidden sm:inline px-2 py-0.5 rounded-full text-[9px] font-lexend font-bold uppercase tracking-widest shrink-0"

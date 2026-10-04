@@ -43,6 +43,7 @@ The two stay in step: the scoreboard follows an open play court and moves on to 
 - **Fair queue in every mode** — the player who has waited longest always plays next, anyone who sat out is prioritised so nobody sits twice in a row, and repeat partners, repeat opponents and the same four coming straight back on together are all avoided.
 - **Up next** — the next match is staged ahead of time so players can get ready, with **Shuffle** to draw it again.
 - **One-tap results** — "Team 1 won" / "Team 2 won", or enter the final score. With auto-start on, the up-next match takes the court immediately.
+- **Lock-in partners** — lock two players together and they always play on the same team. They are drawn into a match together, rejoin the line side by side after a game, and hold the place of whichever of them has waited longer. Locked pairs can meet each other, and the queue and match cards mark them with a link icon. If one partner sits out or is on another court, the other plays with anyone, so a lock never strands a player.
 - **Sit out / check back in** — players can step out without leaving the roster.
 - **Standings** — ranked by wins, then win rate, then point differential, with a log of every game.
 - **Undo** — step back through the last 25 court actions.
@@ -170,6 +171,9 @@ The two stay in step: the scoreboard follows an open play court and moves on to 
 Other controls:
 
 - **Shuffle** on the Up Next card draws a different match.
+- To lock partners, tap **Edit** (the pencil) on a player and choose a **Locked partner**; choose *No one* to release them. Picking someone already locked with a third player moves them and frees that third player.
+  - A pair plays as a unit, so in a small group (say nine players on two courts) locked players can get a few more games than the rest. With more courts or players it evens out.
+  - If the first player in line cannot be matched without splitting a pair — everyone else waiting is locked — a note on **Up next** says so. Unlock a pair or check in another player without a partner.
 - The **⏸** button sits a player out; tap their name under *Sitting out* to check them back in at the back of the line.
 - The **↩** icon on a court sends its players back to the front of the line without recording a result.
 - **Undo** (top right, or `Z`) reverses the last court action.

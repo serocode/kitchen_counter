@@ -9,6 +9,7 @@ import {
   OpenPlayer,
   PlayerRecord,
   PlayerStatus,
+  getPartner,
   getRecord,
   safeSkill,
 } from '@/lib/open-play';
@@ -150,6 +151,7 @@ export function PlayersRoster({
     const { games, wins, losses } = getRecord(records, player.id);
     const label = statusLabel(status);
     const photo = photos[player.id];
+    const partner = getPartner(session, player.id);
 
     return (
       <li
@@ -180,6 +182,14 @@ export function PlayersRoster({
               {games} {games === 1 ? 'game' : 'games'}
               {games > 0 && ` · ${wins}–${losses}`}
             </span>
+            {partner && (
+              <span style={{ color: 'var(--kc-secondary-text)' }} title={`Locked in with ${partner.name}`}>
+                {' · '}
+                <span className="material-symbols-outlined align-middle text-[13px]" aria-hidden="true">link</span>{' '}
+                <span className="sr-only">Locked with </span>
+                {partner.name}
+              </span>
+            )}
           </p>
         </div>
         <IconButton

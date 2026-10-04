@@ -13,9 +13,14 @@ interface EditPlayerDialogProps {
   onCourt: boolean;
   /** Lower-cased names already on the roster, to catch duplicates. */
   takenNames: Set<string>;
+  /** Everyone else on the roster — the candidates for a locked partner. */
+  others: OpenPlayer[];
   onOpenChange: (open: boolean) => void;
-  /** `photo` is the new photo, null to remove it, or undefined when unchanged. */
-  onSave: (changes: PlayerDetails, photo: string | null | undefined) => void;
+  /**
+   * `photo` is the new photo, null to remove it, or undefined when unchanged.
+   * `partnerId` is the chosen locked partner, null for none.
+   */
+  onSave: (changes: PlayerDetails, photo: string | null | undefined, partnerId: string | null) => void;
   onRemove: () => void;
 }
 
@@ -27,6 +32,7 @@ export function EditPlayerDialog({
   photo,
   onCourt,
   takenNames,
+  others,
   onOpenChange,
   onSave,
   onRemove,
@@ -34,6 +40,8 @@ export function EditPlayerDialog({
   const [name, setName] = useState('');
   const [skill, setSkill] = useState(3);
   const [draftPhoto, setDraftPhoto] = useState<string | null>(null);
+  /** The chosen locked partner's id; empty for none, which a <select> needs. */
+  const [partnerId, setPartnerId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Re-seed only when a different player is opened — a queue change behind
@@ -46,6 +54,7 @@ export function EditPlayerDialog({
       setName(player.name);
       setSkill(player.skill);
       setDraftPhoto(photo ?? null);
+      setPartnerId(player.partnerId ?? '');
       setError(null);
     }
   }
@@ -63,9 +72,17 @@ export function EditPlayerDialog({
       setError(`${trimmed} is already on the roster.`);
       return;
     }
-    onSave({ name: trimmed, skill }, draftPhoto === (photo ?? null) ? undefined : draftPhoto);
+    onSave({ name: trimmed, skill }, draftPhoto === (photo ?? null) ? undefined : draftPhoto, partnerId || null);
     onOpenChange(false);
   };
+
+  // Choosing someone who is already locked with a third player breaks that
+  // lock, so say so before it happens rather than after.
+  const chosen = others.find(o => o.id === partnerId);
+  const stolenFrom =
+    chosen?.partnerId && chosen.partnerId !== player?.id
+      ? others.find(o => o.id === chosen.partnerId)
+      : undefined;
 
   return (
     <Dialog open={Boolean(player)} onOpenChange={onOpenChange}>
@@ -142,6 +159,36 @@ export function EditPlayerDialog({
               />
             </div>
             <SkillPicker name="edit-player-skill" value={skill} onChange={setSkill} />
+
+            <div>
+              <label
+                htmlFor="edit-player-partner"
+                className="block text-[10px] font-inter font-bold uppercase tracking-widest mb-2"
+                style={{ color: 'var(--kc-text-dim)' }}
+              >
+                Locked partner
+              </label>
+              <select
+                id="edit-player-partner"
+                value={partnerId}
+                onChange={e => setPartnerId(e.target.value)}
+                style={{ ...inputStyle, colorScheme: 'dark' }}
+              >
+                <option value="">No one — plays with anyone</option>
+                {[...others]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(other => (
+                    <option key={other.id} value={other.id}>
+                      {other.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-2 text-xs font-inter" style={{ color: 'var(--kc-text-muted)' }}>
+                {stolenFrom
+                  ? `${chosen?.name} is locked with ${stolenFrom.name} — choosing them unlocks that pair.`
+                  : 'Locked partners always play on the same team, and take the place of whichever of them has waited longer. While one sits out, the other plays with anyone.'}
+              </p>
+            </div>
             {error && (
               <p role="alert" className="text-sm font-inter" style={{ color: 'var(--kc-error)' }}>
                 {error}

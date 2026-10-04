@@ -58,7 +58,7 @@ export function OpenPlayDashboard({
   const [scoringCourtId, setScoringCourtId] = useState<string | null>(null);
   const now = useNow(15_000);
 
-  const { waiting, statuses, records, standings, lastUndoLabel } = derived;
+  const { waiting, blocked, statuses, records, standings, lastUndoLabel } = derived;
   const { undo } = openPlay;
   const isDialogOpen = setupOpen || endOpen || editingId !== null || scoringCourtId !== null;
 
@@ -73,6 +73,7 @@ export function OpenPlayDashboard({
         name: player?.name ?? getPlayerName(session, id),
         skill: player?.skill ?? null,
         photo: photos[id],
+        partnerId: player?.partnerId,
       };
     },
     [playersById, session, photos],
@@ -184,6 +185,7 @@ export function OpenPlayDashboard({
             <CourtsView
               session={session}
               waiting={waiting}
+              blocked={blocked}
               records={records}
               resolve={resolve}
               now={now}
@@ -250,11 +252,13 @@ export function OpenPlayDashboard({
         photo={editingId ? photos[editingId] : undefined}
         onCourt={editingId ? statuses.get(editingId)?.kind === 'court' : false}
         takenNames={new Set(session.players.map(p => p.name.toLowerCase()))}
+        others={session.players.filter(p => p.id !== editingId)}
         onOpenChange={open => !open && setEditingId(null)}
-        onSave={(changes, photo) => {
+        onSave={(changes, photo, partnerId) => {
           if (!editingId) return;
           openPlay.updatePlayer(editingId, changes);
           if (photo !== undefined) openPlay.setPhoto(editingId, photo);
+          if (partnerId !== (editingPlayer?.partnerId ?? null)) openPlay.setPartner(editingId, partnerId);
         }}
         onRemove={() => editingId && openPlay.removePlayer(editingId)}
       />

@@ -12,6 +12,8 @@ export interface PlayerChip {
   name: string;
   skill: number | null;
   photo?: string;
+  /** Who they are locked in with, if anyone. */
+  partnerId?: string;
 }
 
 export function initials(name: string): string {
@@ -216,6 +218,7 @@ export function TeamBlock({
   const color = TEAM_COLORS[side];
   const total = players.reduce((sum, p) => sum + (p.skill ?? 0), 0);
   const allRated = players.every(p => p.skill !== null);
+  const locked = players.length === 2 && players[0].partnerId === players[1].id;
 
   return (
     <div
@@ -229,7 +232,19 @@ export function TeamBlock({
         className="font-lexend text-[9px] uppercase tracking-widest font-bold flex items-center justify-between gap-2"
         style={{ color }}
       >
-        Team {side + 1}
+        <span className="inline-flex items-center gap-1">
+          Team {side + 1}
+          {locked && (
+            <span
+              className="material-symbols-outlined text-[13px] leading-none"
+              title="Locked partners"
+              role="img"
+              aria-label="Locked partners"
+            >
+              link
+            </span>
+          )}
+        </span>
         {allRated && (
           <span className="tabular-nums" style={{ color: 'var(--kc-text-muted)' }} title="Combined rating">
             Σ {total.toFixed(1)}
