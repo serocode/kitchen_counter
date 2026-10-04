@@ -55,6 +55,7 @@ export function PickleballDashboard({
     resetGameKeepSettings,
     startNextGame,
     undo,
+    swapPartners,
     updateMatchSettings,
     serverPosition,
     servingPlayerIndex,
@@ -243,13 +244,17 @@ export function PickleballDashboard({
 
       {/* ========== VIEW CONTENT ========== */}
       {activeView === 'players' ? (
-        <main className="pt-14 lg:pt-16 pb-[68px] lg:pb-28 h-dvh animate-fade-in">
+        <main className="pt-20 pb-28 md:pb-36 w-full animate-fade-in">
           <PlayersView
             gameState={gameState}
+            gameWon={gameWon}
             matchWon={matchWon}
             momentum={momentum}
             matchStats={matchStats}
             longestRuns={longestRuns}
+            servingPlayerIndex={servingPlayerIndex}
+            receivingPlayerIndex={receivingPlayerIndex}
+            onSwapPartners={swapPartners}
             onEditPlayers={() => setSetupModalOpen(true)}
           />
         </main>

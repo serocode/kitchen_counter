@@ -39,7 +39,7 @@ type FormData = {
 };
 
 const MAX_NAME_LENGTH = 24;
-/** Uncropped, since the spectator view shows the whole frame as a cutout. */
+/** Uncropped; the Players view crops it to a circle, anchored to the top of the frame. */
 const SCOREBOARD_PHOTO: PhotoOptions = { maxDimension: 500, quality: 0.6 };
 
 function buildFormData(props: PlayerSetupProps): FormData {

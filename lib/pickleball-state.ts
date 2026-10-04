@@ -235,6 +235,23 @@ export function rotatePositions(team: Team): Team {
   };
 }
 
+/**
+ * Partners choose their courts before a game starts, and not after: once the
+ * first rally is played, positions follow the score. Events carry their game
+ * number, so "no event in this game" is exactly "no rally yet".
+ */
+export function canSwapPartners(state: GameState): boolean {
+  return !state.events.some(event => event.game === state.currentGame);
+}
+
+/** Put a team's partners in each other's courts — only before a game's first rally. */
+export function swapPartners(state: GameState, team: 'A' | 'B'): GameState {
+  if (!canSwapPartners(state)) return state;
+  const next = clone(state);
+  next.teams[team] = rotatePositions(next.teams[team]);
+  return next;
+}
+
 // ─── Score Call Formatting ────────────────────────────────────────────────────
 
 /** Format a score call string as "servingScore-receivingScore-serverNumber" */

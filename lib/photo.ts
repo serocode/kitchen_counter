@@ -13,7 +13,7 @@ export interface PhotoOptions {
 
 /**
  * Open play avatars: square, and large enough to stay sharp when the
- * scoreboard's spectator view blows them up to a cutout. About 25KB each.
+ * scoreboard's Players view shows them on a big screen. About 25KB each.
  */
 export const AVATAR_PHOTO: PhotoOptions = { maxDimension: 400, quality: 0.7, square: true };
 

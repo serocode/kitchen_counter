@@ -11,6 +11,7 @@ import {
   resetGameKeepSettings as resetGameKeepSettingsFn,
   undoLastAction as undoLastActionFn,
   applyMatchSettings,
+  swapPartners as swapPartnersFn,
   getServerPosition,
   getServingPlayerIndex,
   getReceivingPlayerIndex,
@@ -115,6 +116,7 @@ type Action =
   | { type: 'restart' }
   | { type: 'nextGame' }
   | { type: 'undo' }
+  | { type: 'swapPartners'; team: 'A' | 'B' }
   | ({ type: 'settings' } & MatchSettings);
 
 interface MatchSettings {
@@ -144,6 +146,8 @@ function reducer(state: GameState | null, action: Action): GameState | null {
       const restored = undoLastActionFn(state);
       return restored === state ? state : restorePhotos(restored, state);
     }
+    case 'swapPartners':
+      return swapPartnersFn(state, action.team);
     case 'settings':
       return applyMatchSettings(state, action);
     default:
@@ -228,6 +232,10 @@ export function usePickleballGame() {
     dispatch({ type: 'undo' });
   }, []);
 
+  const swapPartners = useCallback((team: 'A' | 'B') => {
+    dispatch({ type: 'swapPartners', team });
+  }, []);
+
   const updateMatchSettings = useCallback(
     (
       teamAName: string,
@@ -303,6 +311,7 @@ export function usePickleballGame() {
     resetGameKeepSettings,
     startNextGame,
     undo,
+    swapPartners,
     updateMatchSettings,
     replaceState,
     ...derived,

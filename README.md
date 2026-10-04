@@ -246,15 +246,16 @@ Tap the **Stats** tab to view live match analytics:
 
 <img src="public/screenshots/desktop-players-view.png" alt="Players View" width="600" />
 
-Tap the **Players** tab for a visual overview of all four players:
+Tap the **Players** tab for the match lineup — a card per team with both players:
 
-- Player photos (or default silhouettes) for both teams
-- Team and player names
-- Current score displayed between the teams
-- Serving status indicator
+- Player photos (or initials) and names
+- Who is **serving now**, the **second server**, and who is **receiving**, with the server number (`S1` / `S2`)
+- Which court each player is standing in, kept in step with the score
+- Current score and games won between the teams, the last few points, and the final stats once the match is decided
+- **Swap court sides** — before the first rally of a game, put a team's partners in each other's courts to choose who serves or receives first
 - Tap **"Manage Players"** to edit names or photos
 
-This view works well as a **spectator display** — great for projecting on a big screen courtside.
+The layout scales up on a large screen, so it still works as a **spectator display** projected courtside.
 
 ---
 
